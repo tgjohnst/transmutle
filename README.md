@@ -66,6 +66,9 @@ The following runes are available:
 * **New Game Button:** Starts a new game with new random start and target words, and resets essence.  
 * **Play Again Button (in Game Over modal):** Restarts the game with new random words.
 
+## Screenshot
+![Screenshot](assets/transmutle_screenshot.png)
+
 ## **Technologies Used**
 
 * HTML  
