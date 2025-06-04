@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transmutle: The Word Alchemy Puzzle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1b26; /* Dark blue-purple */
+            color: #c0c0c0; /* Light silver */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for scroll */
+            min-height: 100vh;
+            padding: 20px;
+            overflow-y: auto; /* Enable scroll for smaller screens */
+        }
+        .game-container {
+            background-color: #24283b; /* Slightly lighter dark blue */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(128, 0, 128, 0.5); /* Purple glow */
+            width: 100%;
+            max-width: 600px;
+        }
+        .title-font {
+            font-family: 'MedievalSharp', cursive;
+            color: #ffc107; /* Gold */
+        }
+        .letter-tile {
+            width: 50px;
+            height: 50px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #4f5b93; /* Darker border */
+            margin: 3px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border-radius: 6px;
+            text-transform: uppercase;
+            transition: background-color 0.3s, border-color 0.3s, transform 0.3s, box-shadow 0.2s;
+            cursor: default; /* Default cursor */
+        }
+        .letter-tile.clickable-position:hover {
+            border-color: #ffc107; /* Gold border on hover when clickable */
+            box-shadow: 0 0 8px #ffc107;
+            cursor: pointer; /* Pointer cursor when clickable */
+        }
+        .letter-tile.green { background-color: #28a745; border-color: #1e7e34; color: white; } /* Green */
+        .letter-tile.yellow { background-color: #ffc107; border-color: #dba100; color: #333; } /* Yellow */
+        .letter-tile.grey { background-color: #495057; border-color: #32383e; color: white; } /* Grey */
+        .letter-tile.empty { background-color: #3a3f58; }
+
+        .small-rune-button {
+            background-color: #4a5568; /* Darker grey */
+            color: #e2e8f0; /* Light grey text */
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 2px solid #718096; /* Medium grey border */
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s, transform 0.2s;
+            font-size: 1.5rem; /* For symbol */
+            min-width: 60px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative; /* For cost display */
+        }
+        .small-rune-button:hover {
+            background-color: #2d3748; /* Even darker grey */
+            border-color: #a0aec0; /* Lighter grey border on hover */
+            transform: translateY(-2px);
+        }
+        .small-rune-button.selected-rune {
+            background-color: #7e57c2; /* Purple */
+            border-color: #ff6f00; /* Orange border for selected */
+            color: white;
+            box-shadow: 0 0 10px #ff6f00;
+        }
+        .rune-cost-display {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #ffc107; /* Gold */
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            background-color: rgba(0,0,0,0.5);
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+        .rune-symbol {
+            line-height: 1; /* Ensure symbol is vertically centered */
+        }
+
+        #rune-info-display {
+            background-color: #2f354e; /* Darker card background */
+            border: 1px solid #4f5b93;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 80px; /* Ensure space for description */
+            text-align: left;
+        }
+        #rune-info-display .name { font-size: 1.1em; font-weight: bold; color: #c5a5ff; margin-bottom: 5px;}
+        #rune-info-display .cost { font-size: 0.9em; color: #ffc107; margin-bottom: 8px;}
+        #rune-info-display .description { font-size: 0.9em; color: #a0a0a0;}
+
+
+        #rune-input-area input, #rune-input-area select {
+            background-color: #1a1b26;
+            color: #c0c0c0;
+            border: 1px solid #4f5b93;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 5px;
+            margin-right: 5px;
+            width: calc(50% - 10px); /* Adjust width for two inputs per row */
+        }
+        #rune-input-area label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            display: block; /* Ensure label is above input */
+            margin-bottom: 2px;
+        }
+        #rune-input-area .input-group { /* Wrapper for label + input */
+            margin-bottom: 10px;
+        }
+
+        .action-button { /* Common style for Transmute and New Game buttons */
+            color: #1a1b26; /* Dark text for contrast */
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 100%;
+            margin-top: 10px; /* Adjusted margin */
+        }
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+        .action-button:disabled {
+            background-color: #555 !important; /* Ensure disabled style overrides */
+            color: #888 !important;
+            cursor: not-allowed !important;
+        }
+        #transmute-button {
+             background-color: #ffc107; /* Gold */
+        }
+        #transmute-button:hover:not(:disabled) {
+            background-color: #e0a800; /* Darker gold */
+        }
+        #new-game-button {
+            background-color: #6366f1; /* Indigo */
+        }
+         #new-game-button:hover {
+            background-color: #4f46e5; /* Darker Indigo */
+        }
+
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #24283b;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(128, 0, 128, 0.8);
+        }
+        .history-item {
+            background-color: #2a2e42;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        .history-word span {
+            display: inline-block;
+            width: 20px; /* Smaller tiles for history */
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            margin-right: 2px;
+            font-size: 0.8em;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <header class="text-center mb-6">
+            <h1 id="game-title" class="text-4xl title-font">Transmutle</h1>
+            <p id="game-tagline" class="text-lg text-purple-300 title-font">The Word Alchemy Puzzle</p>
+        </header>
+
+        <div class="game-info grid grid-cols-2 gap-4 mb-6 text-center">
+            <div>
+                <p class="text-sm text-purple-400">Essence Remaining</p>
+                <p id="essence-display" class="text-2xl font-bold text-amber-400">20 / 20</p>
+            </div>
+            <div>
+                <p class="text-sm text-purple-400">Target Word</p>
+                <div id="target-word-display" class="text-2xl font-bold text-gray-500">_ _ _ _ _</div>
+            </div>
+        </div>
+
+        <div id="current-word-container" class="flex justify-center mb-6">
+            <!-- Letter tiles will be generated here by JS -->
+        </div>
+
+        <div id="rune-selection-area" class="mb-6">
+            <h2 class="text-2xl title-font text-center mb-4 text-purple-300">Activate a Rune</h2>
+            <div id="rune-buttons-container" class="flex justify-center space-x-2 mb-4">
+                <!-- Small rune buttons will be generated here by JS -->
+            </div>
+            <div id="rune-info-display">
+                Mouse over a rune to see its details. Select a rune to see its parameters.
+            </div>
+            <div id="rune-input-area" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                <!-- Inputs for the selected rune will appear here -->
+            </div>
+        </div>
+        
+        <button id="transmute-button" class="action-button" disabled>Select a Rune to Transmute</button>
+        <!-- New Game button moved below history log -->
+
+        <div id="message-log" class="mt-6 p-3 bg-gray-700/50 rounded-lg text-center min-h-[40px] text-amber-300">
+            Welcome, Alchemist! Select a rune to begin.
+        </div>
+
+        <div id="history-log-container" class="mt-6">
+            <h3 class="text-xl title-font text-center mb-2 text-purple-300">Transmutation History</h3>
+            <div id="history-log" class="max-h-40 overflow-y-auto p-2 bg-gray-800/60 rounded-lg">
+                <!-- History items will be appended here -->
+            </div>
+        </div>
+        
+        <button id="new-game-button" class="action-button mt-6">New Game</button> 
+        <!-- Added mt-6 for spacing -->
+
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="modal-title" class="text-3xl title-font mb-4">Game Over!</h2>
+                <p id="modal-message" class="mb-4 text-lg"></p>
+                <p class="mb-1 text-gray-400">The target word was:</p>
+                <p id="modal-target-word" class="text-2xl font-bold text-amber-400 mb-6"></p>
+                <button id="play-again-button" class="action-button bg-green-500 hover:bg-green-600">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const WORD_LENGTH = 5;
+        const INITIAL_ESSENCE = 20;
+        const WORD_LIST = ["WATER", "FLAME", "STONE", "EARTH", "CLOUD", "PLANT", "BEAST", "MAGIC", "SPELL", "POWER", "LIGHT", "GHOST", "WITCH", "GRIMO", "RUNES", "ABYSS", "BLAZE", "EMBER", "FROST", "GLYPH", "QUARTZ", "SPIRIT", "TOKEN", "CHARM", "QUEST"];
+
+        const VOWELS = "AEIOU";
+        const CONSONANTS = "BCDFGHJKLMNPQRSTVWXYZ";
+
+        const RUNES = {
+            singleLetterSwap: {
+                name: "Single Letter Swap",
+                symbol: "\u270E", // ✎
+                cost: 3, 
+                description: "Change one letter (position 1-5) to any other letter.",
+                inputs: [
+                    { id: 'sls-pos', type: 'number', label: 'Position (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 1", isPosition: true },
+                    { id: 'sls-char', type: 'text', label: 'New Letter (A-Z)', maxLength: 1, placeholder: "e.g., X" }
+                ],
+                apply: (word, pos, char) => {
+                    pos = parseInt(pos) - 1; 
+                    if (isNaN(pos) || pos < 0 || pos >= WORD_LENGTH) return { success: false, error: "Invalid position." };
+                    if (!/^[A-Z]$/.test(char.toUpperCase())) return { success: false, error: "Invalid letter." };
+                    let newWordArr = word.split('');
+                    newWordArr[pos] = char.toUpperCase();
+                    return { success: true, newWord: newWordArr.join('') };
+                }
+            },
+            adjacentSwap: {
+                name: "Positional Transposition",
+                symbol: "\u21C4", // ↔
+                cost: 1,
+                description: "Swap letter at position (1-5). Pos 1-4 swaps with right; Pos 5 swaps with Pos 1.",
+                inputs: [
+                    { id: 'as-pos', type: 'number', label: 'Position to swap (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 2", isPosition: true }
+                ],
+                apply: (word, pos) => {
+                    pos = parseInt(pos) - 1; 
+                    if (isNaN(pos) || pos < 0 || pos >= WORD_LENGTH) return { success: false, error: "Invalid position for swap." };
+                    
+                    let newWordArr = word.split('');
+                    if (pos === WORD_LENGTH - 1) { 
+                        [newWordArr[WORD_LENGTH - 1], newWordArr[0]] = [newWordArr[0], newWordArr[WORD_LENGTH - 1]]; 
+                    } else { 
+                        [newWordArr[pos], newWordArr[pos+1]] = [newWordArr[pos+1], newWordArr[pos]]; 
+                    }
+                    return { success: true, newWord: newWordArr.join('') };
+                }
+            },
+            vowelConsonantShift: {
+                name: "Vowel/Consonant Cycle",
+                symbol: "\u21BB", // ↻
+                cost: 2,
+                description: "Cycle a letter at a position (1-5) to the next vowel or consonant.",
+                inputs: [
+                    { id: 'vcs-pos', type: 'number', label: 'Position of letter (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 3", isPosition: true }
+                ],
+                apply: (word, pos) => {
+                    pos = parseInt(pos) - 1; 
+                    if (isNaN(pos) || pos < 0 || pos >= WORD_LENGTH) return { success: false, error: "Invalid position." };
+                    let newWordArr = word.split('');
+                    const char = newWordArr[pos];
+                    let newChar = char;
+                    if (VOWELS.includes(char)) {
+                        newChar = VOWELS[(VOWELS.indexOf(char) + 1) % VOWELS.length];
+                    } else if (CONSONANTS.includes(char)) {
+                        newChar = CONSONANTS[(CONSONANTS.indexOf(char) + 1) % CONSONANTS.length];
+                    } else {
+                        return { success: false, error: "Letter is not a standard vowel or consonant."};
+                    }
+                    newWordArr[pos] = newChar;
+                    return { success: true, newWord: newWordArr.join('') };
+                }
+            },
+            elementalAffinity: {
+                name: "Elemental Affinity Shift",
+                symbol: "\u2726", // ✦
+                cost: 4, 
+                description: "Shift a letter at a position (1-5) to a random letter present in the hidden target word.", 
+                inputs: [
+                     { id: 'eas-pos', type: 'number', label: 'Position of letter (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 1", isPosition: true }
+                ],
+                apply: (word, pos) => {
+                    pos = parseInt(pos) - 1; 
+                    if (isNaN(pos) || pos < 0 || pos >= WORD_LENGTH) return { success: false, error: "Invalid position." };
+                    
+                    if (!targetWord || targetWord.length === 0) { 
+                        return { success: false, error: "Target word not available for affinity shift."};
+                    }
+
+                    let newWordArr = word.split('');
+                    const originalChar = newWordArr[pos];
+                    let randomTargetChar;
+                    let attempts = 0;
+                    const maxAttempts = targetWord.length * 2; 
+
+                    do {
+                        randomTargetChar = targetWord[Math.floor(Math.random() * targetWord.length)];
+                        attempts++;
+                    } while (randomTargetChar === originalChar && attempts < maxAttempts && new Set(targetWord.split('')).size > 1);
+                    
+                    newWordArr[pos] = randomTargetChar;
+                    return { success: true, newWord: newWordArr.join('') };
+                }
+            },
+            cloneLetter: {
+                name: "Clone Letter",
+                symbol: "\u2295", // ⊕
+                cost: 2,
+                description: "Clone letter from source (1-5) to target (1-5), overwriting it.",
+                inputs: [
+                    { id: 'cl-src-pos', type: 'number', label: 'Source Position (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 1", isPosition: true },
+                    { id: 'cl-tgt-pos', type: 'number', label: 'Target Position (1-5)', min: 1, max: WORD_LENGTH, placeholder: "e.g., 5", isPosition: true }
+                ],
+                apply: (word, srcPos, tgtPos) => {
+                    srcPos = parseInt(srcPos) - 1; 
+                    tgtPos = parseInt(tgtPos) - 1; 
+                    if (isNaN(srcPos) || srcPos < 0 || srcPos >= WORD_LENGTH) return { success: false, error: "Invalid source position." };
+                    if (isNaN(tgtPos) || tgtPos < 0 || tgtPos >= WORD_LENGTH) return { success: false, error: "Invalid target position." };
+                    if (srcPos === tgtPos) return { success: false, error: "Source and target positions cannot be the same."};
+                    
+                    let newWordArr = word.split('');
+                    newWordArr[tgtPos] = newWordArr[srcPos];
+                    return { success: true, newWord: newWordArr.join('') };
+                }
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const gameTitleElement = document.getElementById('game-title');
+        const gameTaglineElement = document.getElementById('game-tagline');
+        const currentWordContainer = document.getElementById('current-word-container');
+        const targetWordDisplay = document.getElementById('target-word-display');
+        const essenceDisplay = document.getElementById('essence-display');
+        
+        const runeButtonsContainer = document.getElementById('rune-buttons-container');
+        const runeInfoDisplay = document.getElementById('rune-info-display');
+        const runeInputArea = document.getElementById('rune-input-area');
+
+        const transmuteButton = document.getElementById('transmute-button');
+        const newGameButton = document.getElementById('new-game-button'); 
+        const messageLog = document.getElementById('message-log');
+        const historyLog = document.getElementById('history-log');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalTargetWord = document.getElementById('modal-target-word');
+        const playAgainButton = document.getElementById('play-again-button');
+
+        // --- GAME STATE ---
+        let startWord = "";
+        let targetWord = ""; 
+        let currentWord = "";
+        let essence = INITIAL_ESSENCE;
+        let selectedRuneKey = null;
+        let gameOver = false;
+        let gameWon = false;
+        let transmutationHistory = [];
+
+        // --- GAME LOGIC ---
+        function getRandomWord() {
+            let newWord;
+            do {
+                newWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+            } while (newWord === startWord || newWord === targetWord); 
+            return newWord;
+        }
+
+        function initGame() {
+            startWord = getRandomWord(); 
+            targetWord = getRandomWord(); 
+            while (targetWord === startWord) { 
+                targetWord = getRandomWord();
+            }
+
+            currentWord = startWord;
+            essence = INITIAL_ESSENCE;
+            selectedRuneKey = null;
+            gameOver = false;
+            gameWon = false;
+            transmutationHistory = [];
+            transmuteButton.disabled = true; 
+            newGameButton.disabled = false; 
+
+            renderCurrentWord(currentWord); 
+            updateEssenceDisplay();
+            renderRunes(); 
+            messageLog.textContent = "Welcome, Alchemist! Select a rune to begin.";
+            messageLog.className = "mt-6 p-3 bg-gray-700/50 rounded-lg text-center min-h-[40px] text-amber-300";
+            transmuteButton.textContent = "Select a Rune to Transmute";
+            gameOverModal.classList.add('hidden');
+            targetWordDisplay.textContent = "_ ".repeat(WORD_LENGTH).trim();
+            historyLog.innerHTML = "";
+        }
+
+        function renderCurrentWord(word, feedback = null) {
+            currentWordContainer.innerHTML = '';
+            const currentRune = selectedRuneKey ? RUNES[selectedRuneKey] : null;
+            const runeNeedsPosition = currentRune && currentRune.inputs.some(input => input.isPosition);
+
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                const tile = document.createElement('div');
+                tile.classList.add('letter-tile');
+                tile.textContent = word[i] || '';
+                
+                if (feedback && feedback[i]) {
+                    tile.classList.add(feedback[i]);
+                } else {
+                    tile.classList.add('empty');
+                }
+
+                if (runeNeedsPosition && !gameOver) {
+                    tile.classList.add('clickable-position');
+                    tile.dataset.position = i + 1; 
+                    tile.addEventListener('click', handleLetterTileClick);
+                } else {
+                    tile.classList.remove('clickable-position');
+                }
+                currentWordContainer.appendChild(tile);
+            }
+        }
+        
+        function handleLetterTileClick(event) {
+            if (gameOver || !selectedRuneKey) return;
+            const clickedPosition = event.currentTarget.dataset.position;
+            const currentRune = RUNES[selectedRuneKey];
+
+            const positionInputDefinition = currentRune.inputs.find(input => input.isPosition);
+            if (positionInputDefinition) {
+                const positionInputElement = document.getElementById(positionInputDefinition.id);
+                if (positionInputElement) {
+                    positionInputElement.value = clickedPosition;
+                    logMessage(`Position ${clickedPosition} selected for ${currentRune.name}.`, 'info');
+                }
+            }
+        }
+
+
+        function updateEssenceDisplay() {
+            essenceDisplay.textContent = `${essence} / ${INITIAL_ESSENCE}`;
+        }
+        
+        function renderRunes() {
+            runeButtonsContainer.innerHTML = '';
+            runeInputArea.innerHTML = ''; 
+            runeInfoDisplay.innerHTML = 'Mouse over a rune to see its details. Select a rune to see its parameters.';
+
+            Object.keys(RUNES).forEach(key => {
+                const rune = RUNES[key];
+                const button = document.createElement('button');
+                button.classList.add('small-rune-button');
+                button.dataset.runeKey = key;
+
+                const symbolSpan = document.createElement('span');
+                symbolSpan.classList.add('rune-symbol');
+                symbolSpan.textContent = rune.symbol;
+                button.appendChild(symbolSpan);
+
+                const costSpan = document.createElement('span');
+                costSpan.classList.add('rune-cost-display');
+                costSpan.textContent = rune.cost;
+                button.appendChild(costSpan);
+                
+                button.addEventListener('mouseover', () => {
+                    if (!gameOver) { 
+                        if (!selectedRuneKey || selectedRuneKey !== key) {
+                             runeInfoDisplay.innerHTML = `
+                                <div class="name">${rune.name}</div>
+                                <div class="cost">Cost: ${rune.cost} Essence</div>
+                                <div class="description">${rune.description}</div>
+                            `;
+                        }
+                    }
+                });
+                button.addEventListener('mouseout', () => {
+                    if (!gameOver) {
+                        if (selectedRuneKey) {
+                            const selRune = RUNES[selectedRuneKey];
+                            runeInfoDisplay.innerHTML = `
+                                <div class="name">${selRune.name}</div>
+                                <div class="cost">Cost: ${selRune.cost} Essence</div>
+                                <div class="description">${selRune.description}</div>
+                            `;
+                        } else {
+                            runeInfoDisplay.innerHTML = 'Mouse over a rune to see its details. Select a rune to see its parameters.';
+                        }
+                    }
+                });
+
+                button.addEventListener('click', () => handleRuneSelection(key));
+                runeButtonsContainer.appendChild(button);
+            });
+        }
+
+        function handleRuneSelection(runeKey) {
+            if (gameOver) return;
+
+            selectedRuneKey = runeKey;
+            const currentRune = RUNES[selectedRuneKey];
+
+            const allRuneButtons = runeButtonsContainer.querySelectorAll('.small-rune-button');
+            allRuneButtons.forEach(btn => {
+                btn.classList.remove('selected-rune');
+                if (btn.dataset.runeKey === runeKey) {
+                    btn.classList.add('selected-rune');
+                }
+            });
+
+            runeInfoDisplay.innerHTML = `
+                <div class="name">${currentRune.name}</div>
+                <div class="cost">Cost: ${currentRune.cost} Essence</div>
+                <div class="description">${currentRune.description}</div>
+            `;
+
+            runeInputArea.innerHTML = ''; 
+            currentRune.inputs.forEach(inputDef => {
+                const inputGroup = document.createElement('div');
+                inputGroup.classList.add('input-group');
+
+                const label = document.createElement('label');
+                label.htmlFor = inputDef.id;
+                label.textContent = inputDef.label;
+                inputGroup.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = inputDef.type;
+                input.id = inputDef.id;
+                input.name = inputDef.id;
+                if (inputDef.min !== undefined) input.min = inputDef.min;
+                if (inputDef.max !== undefined) input.max = inputDef.max;
+                if (inputDef.maxLength !== undefined) input.maxLength = inputDef.maxLength;
+                if (inputDef.placeholder) input.placeholder = inputDef.placeholder;
+                input.classList.add('w-full'); 
+                inputGroup.appendChild(input);
+                runeInputArea.appendChild(inputGroup);
+            });
+
+            transmuteButton.textContent = `Transmute with ${currentRune.name}`;
+            transmuteButton.disabled = false;
+            logMessage(`${currentRune.name} selected. Adjust parameters and transmute.`, 'info');
+            renderCurrentWord(currentWord, getWordleFeedback(currentWord, targetWord)); 
+        }
+
+        function handleTransmute() {
+            if (gameOver || !selectedRuneKey) return;
+
+            const rune = RUNES[selectedRuneKey];
+            if (essence < rune.cost) {
+                logMessage(`Not enough essence for ${rune.name}. Needs ${rune.cost}, you have ${essence}.`, 'error');
+                return;
+            }
+
+            const inputElements = rune.inputs.map(inputDef => document.getElementById(inputDef.id));
+            const inputValues = inputElements.map(el => el.value);
+
+            for(let i=0; i < inputValues.length; i++) {
+                if (inputValues[i].trim() === "") {
+                    logMessage(`Please fill all inputs for ${rune.name}. Input '${rune.inputs[i].label}' is empty.`, 'error');
+                    return;
+                }
+                if (rune.inputs[i].type === 'number') {
+                    const numValue = parseInt(inputValues[i]);
+                    const min = parseInt(rune.inputs[i].min);
+                    const max = parseInt(rune.inputs[i].max);
+                    if (isNaN(numValue) || (min !== undefined && numValue < min) || (max !== undefined && numValue > max)) {
+                         logMessage(`Invalid value for '${rune.inputs[i].label}'. Must be between ${min} and ${max}.`, 'error');
+                         return;
+                    }
+                }
+
+                if (rune.inputs[i].type === 'text' && rune.inputs[i].maxLength === 1) {
+                    inputValues[i] = inputValues[i].toUpperCase();
+                     if (!/^[A-Z]$/.test(inputValues[i])) {
+                        logMessage(`Invalid character for '${rune.inputs[i].label}'. Must be a single letter A-Z.`, 'error');
+                        return;
+                    }
+                }
+            }
+
+            const transformationResult = rune.apply(currentWord, ...inputValues);
+
+            if (transformationResult.success) {
+                essence -= rune.cost;
+                const previousWord = currentWord; 
+                currentWord = transformationResult.newWord;
+                
+                const feedback = getWordleFeedback(currentWord, targetWord);
+                renderCurrentWord(currentWord, feedback);
+                updateEssenceDisplay();
+                addToHistory(previousWord, transformationResult.newWord, rune.name, feedback);
+
+                logMessage(`${rune.name} applied! ${previousWord} -> ${currentWord}. Cost: ${rune.cost} essence.`, 'success');
+                checkWinLoss();
+            } else {
+                logMessage(`Transformation failed: ${transformationResult.error || 'Unknown error.'}`, 'error');
+            }
+        }
+
+        function getWordleFeedback(guess, target) {
+            let feedback = Array(WORD_LENGTH).fill(null);
+            let targetChars = target.split('');
+            let guessChars = guess.split('');
+
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                if (guessChars[i] === targetChars[i]) {
+                    feedback[i] = 'green';
+                    targetChars[i] = null; 
+                    guessChars[i] = '#'; 
+                }
+            }
+
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                if (guessChars[i] !== '#') { 
+                    const yellowIndex = targetChars.indexOf(guessChars[i]);
+                    if (yellowIndex !== -1) {
+                        feedback[i] = 'yellow';
+                        targetChars[yellowIndex] = null; 
+                    }
+                }
+            }
+            
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                if (feedback[i] === null) {
+                    feedback[i] = 'grey';
+                }
+            }
+            return feedback;
+        }
+        
+        function addToHistory(oldWord, newWord, runeName, feedback) {
+            transmutationHistory.push({ oldWord, newWord, runeName, feedback });
+            const historyItem = document.createElement('div');
+            historyItem.classList.add('history-item', 'flex', 'justify-between', 'items-center', 'text-sm');
+            
+            const wordInfo = document.createElement('div');
+            wordInfo.classList.add('flex', 'items-center');
+
+            const oldWordSpan = document.createElement('span');
+            oldWordSpan.classList.add('history-word', 'opacity-70', 'mr-1');
+            oldWord.split('').forEach((char) => {
+                const charTile = document.createElement('span');
+                charTile.textContent = char;
+                charTile.classList.add('grey'); 
+                oldWordSpan.appendChild(charTile);
+            });
+            wordInfo.appendChild(oldWordSpan);
+            
+            const arrowSpan = document.createElement('span');
+            arrowSpan.textContent = '→';
+            arrowSpan.classList.add('mx-1', 'text-purple-300');
+            wordInfo.appendChild(arrowSpan);
+
+            const newWordSpan = document.createElement('span');
+            newWordSpan.classList.add('history-word');
+            newWord.split('').forEach((char, index) => {
+                const charTile = document.createElement('span');
+                charTile.textContent = char;
+                charTile.classList.add(feedback[index]); 
+                newWordSpan.appendChild(charTile);
+            });
+            wordInfo.appendChild(newWordSpan);
+
+
+            const runeInfo = document.createElement('span');
+            runeInfo.classList.add('text-xs', 'text-purple-300', 'ml-2', 'text-right', 'flex-shrink-0');
+            runeInfo.textContent = `via ${runeName}`;
+            
+            historyItem.appendChild(wordInfo);
+            historyItem.appendChild(runeInfo);
+            historyLog.insertBefore(historyItem, historyLog.firstChild); 
+        }
+
+
+        function checkWinLoss() {
+            if (currentWord === targetWord) {
+                gameOver = true;
+                gameWon = true;
+                showGameOverModal(true);
+            } else if (essence <= 0) {
+                gameOver = true;
+                gameWon = false;
+                showGameOverModal(false);
+            }
+             if (gameOver) {
+                transmuteButton.disabled = true;
+                newGameButton.disabled = false; 
+                transmuteButton.textContent = "Game Over";
+                const allRuneButtons = runeButtonsContainer.querySelectorAll('.small-rune-button');
+                allRuneButtons.forEach(btn => btn.classList.remove('selected-rune'));
+                runeInputArea.innerHTML = ''; 
+                runeInfoDisplay.innerHTML = 'Game Over. Click "Play Again" or "New Game".';
+                renderCurrentWord(currentWord, getWordleFeedback(currentWord, targetWord)); 
+             }
+        }
+
+        function showGameOverModal(isWin) {
+            targetWordDisplay.textContent = targetWord.split('').join(' '); 
+            modalTargetWord.textContent = targetWord;
+            if (isWin) {
+                modalTitle.textContent = "Transmutation Complete!";
+                modalTitle.classList.remove('text-red-400');
+                modalTitle.classList.add('text-green-400');
+                modalMessage.textContent = `Congratulations! You successfully transmuted ${startWord} to ${targetWord} with ${essence} essence remaining.`;
+            } else {
+                modalTitle.textContent = "Essence Depleted!";
+                modalTitle.classList.remove('text-green-400');
+                modalTitle.classList.add('text-red-400');
+                modalMessage.textContent = `Alas, your essence is gone. The alchemical process failed. The target word was ${targetWord}.`;
+            }
+            gameOverModal.classList.remove('hidden');
+        }
+
+        function logMessage(message, type = 'info') {
+            messageLog.textContent = message;
+            messageLog.classList.remove('text-amber-300', 'text-red-400', 'text-green-400', 'text-sky-300');
+            if (type === 'error') {
+                messageLog.classList.add('text-red-400');
+            } else if (type === 'success') {
+                messageLog.classList.add('text-green-400');
+            } else if (type === 'info') { 
+                 messageLog.classList.add('text-sky-300');
+            } 
+            else { 
+                messageLog.classList.add('text-amber-300');
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        playAgainButton.addEventListener('click', () => {
+            gameOverModal.classList.add('hidden');
+            initGame();
+        });
+        
+        transmuteButton.addEventListener('click', handleTransmute);
+        newGameButton.addEventListener('click', initGame); 
+
+        // --- INITIALIZE GAME ---
+        document.addEventListener('DOMContentLoaded', initGame);
+
+    </script>
+</body>
+</html>
